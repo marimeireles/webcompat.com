@@ -671,6 +671,6 @@ function BugForm() {
   return this.init();
 }
 
-$(function() {
+window.onload = function() {
   new BugForm();
-});
+};
