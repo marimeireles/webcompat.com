@@ -129,10 +129,10 @@ def get_issue_category(issue_category, other_params=None):
     if issue_category in category_list:
         STATUSES = app.config['STATUSES']
         params.add('milestone', STATUSES[issue_category]['id'])
-        return api_request('get', issues_path, params=params)
+        return api_request('get', issues_path + '?per_page=5', params=params)
     elif issue_category == 'closed':
         params['state'] = 'closed'
-        return api_request('get', issues_path, params=params)
+        return api_request('get', issues_path + '?per_page=5', params=params)
     else:
         # The path doesn’t exist. 404 Not Found.
         abort(404)
