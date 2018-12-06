@@ -6,6 +6,7 @@
 """Module for the main routes of webcompat.com."""
 import logging
 import os
+import urlparse
 
 from flask import abort
 from flask import flash
@@ -229,16 +230,17 @@ def create_issue():
         log.info('{ip} {url}'.format(
             ip=request.remote_addr,
             url=form['url'].encode('utf-8')))
-        # Checking blacklisted domains
-        if is_blacklisted_domain(form['url']):
-            msg = app.config['IS_BLACKLISTED_DOMAIN'].format(form['url'])
-            flash(msg, 'notimeout')
-            return redirect(url_for('index'))
         # Check if the form is valid
         if not is_valid_issue_form(form):
             abort(400)
-        # Anonymous reporting
         if form.get('submit_type') == PROXY_REPORT:
+            # Checking blacklisted domains
+            domain = urlparse.urlsplit(form['url']).hostname
+            if is_blacklisted_domain(domain):
+                msg = app.config['IS_BLACKLISTED_DOMAIN'].format(form['url'])
+                flash(msg, 'notimeout')
+                return redirect(url_for('index'))
+            # Anonymous reporting
             json_response = report_issue(form, proxy=True)
             session['show_thanks'] = True
             return redirect(
@@ -437,6 +439,14 @@ def cssfixme():
     """
     msg = app.config['CSS_FIX_ME']
     return (msg, 410, {'content-type': 'text/plain; charset=utf-8'})
+
+
+@app.route('/dashboard')
+def dashboard():
+    """Route for dashboards index."""
+    if g.user:
+        get_user_info()
+    return render_template('dashboard/home.html')
 
 
 @app.route('/dashboard/triage')
