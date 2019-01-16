@@ -4,9 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """Module for the main routes of webcompat.com."""
+from hashlib import sha1
+import json
 import logging
 import os
 import urlparse
+from uuid import uuid4
 
 from flask import abort
 from flask import flash
@@ -36,6 +39,7 @@ from helpers import prepare_form
 from helpers import set_referer
 from issues import report_issue
 from webcompat import app
+from webcompat.api import endpoints as api
 from webcompat.db import session_db
 from webcompat.db import User
 from webcompat import github
@@ -55,6 +59,7 @@ def before_request():
         g.user = User.query.get(session['user_id'])
     g.referer = get_referer(request) or url_for('index')
     g.request_headers = request.headers
+    request.nonce = sha1(uuid4().hex).hexdigest()
 
 
 @app.after_request
@@ -193,6 +198,7 @@ def create_issue():
         * full description
         * tested in another browser
         * body
+        * utm_ params for Google Analytics
     * HTTP POST with an attached form
       * submit a form to GitHub to create a new issue
       * form submit type:
@@ -219,7 +225,10 @@ def create_issue():
             return render_template('thanks.html')
         bug_form = get_form(form_data)
         session['extra_labels'] = form_data['extra_labels']
-        return render_template('new-issue.html', form=bug_form)
+        source = form_data.pop('utm_source', None)
+        campaign = form_data.pop('utm_campaign', None)
+        return render_template('new-issue.html', form=bug_form, source=source,
+                               campaign=campaign, nonce=request.nonce)
     # Issue Creation section
     elif request_type == 'create':
         # Check if there is a form
@@ -268,13 +277,16 @@ def create_issue():
 @app.route('/issues/<int:number>')
 @cache_policy(private=True, uri_max_age=0, must_revalidate=True)
 def show_issue(number):
+    issue_json, issue_status_code, issue_headers = api.proxy_issue(number)
+    issue_json = json.loads(issue_json)
+    print(issue_json)
     """Route to display a single issue."""
     if g.user:
         get_user_info()
     if session.get('show_thanks'):
         flash(number, 'thanks')
         session.pop('show_thanks')
-    return render_template('issue.html', number=number)
+    return render_template('issue.html', number=number, issue_body=issue_json['body_html'])
 
 
 @app.route('/me')
