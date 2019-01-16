@@ -43,6 +43,9 @@
 {%- if config.PRODUCTION or config.STAGING -%}
 <script src="{{ url_for('static', filename='js/dist/issue-list.min.js')|bust_cache }}"></script>
 {% else %}
+<script src="{{ url_for('static', filename='js/vendor/markdown-it.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/markdown-it-emoji-1.4.0.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vendor/markdown-it-sanitizer-0.4.1.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lib/models/label-list.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lib/models/issue.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lib/mixins/pagination.js') }}"></script>
